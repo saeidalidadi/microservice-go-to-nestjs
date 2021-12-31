@@ -1,10 +1,33 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/streadway/amqp"
 )
+
+type MessageQueue struct {
+	Body    string `json:"body"`
+	Pattern string `json:"pattern"`
+	Age     string `json:"age"`
+	Data    string `json:"data"`
+}
+
+func NewMessageQueue(body, pattern, age string, data string) *MessageQueue {
+	return &MessageQueue{
+		body, pattern, age, data,
+	}
+}
+
+func (m *MessageQueue) Marshal() ([]byte, error) {
+	bytes, err := json.Marshal(m)
+
+	if err != nil {
+		return nil, err
+	}
+	return bytes, err
+}
 
 func main() {
 	conn, amqError := amqp.Dial("amqp://localhost:5672/")
@@ -24,9 +47,9 @@ func main() {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	body := "{ \"body\":\"Hello World!\", \"pattern\":\"test\"}"
-	//y := x{data: "AAAAAAA"}
-	//body, _ := json.Marshal(y)
+	message := NewMessageQueue("Hello...", "test", "20", "data...")
+	body, _ := message.Marshal()
+
 	err = ch.Publish(
 		"",     // exchange
 		q.Name, // routing key
@@ -34,7 +57,7 @@ func main() {
 		false,  // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte(body),
+			Body:        body,
 		},
 	)
 	failOnError(err, "Failed to publish a message")
